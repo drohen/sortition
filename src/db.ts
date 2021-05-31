@@ -1,273 +1,372 @@
-import { Database } from "sqlite3"
-import { uuid } from "uuidv4"
-import { Resolve, Hub, DataItem } from "./common/interfaces"
-import { debugError, randomInt } from "./common/utils"
+import type * as sqlite from "https://deno.land/x/sqlite/mod.ts"
+import { DataProvider } from "./core.ts"
 
-// TODO: add doc
-export interface DBActions {
-    createHub: () => Promise<Hub>
-    deactivateHub: (id: string) => Promise<Hub>
-    addData: (hubId: string, data: any) => Promise<DataItem>
-    deactivateData: (id: string) => Promise<DataItem>
-    getData: (hubId: string) => Promise<DataItem>
+enum DataType 
+{
+	string = `TEXT`,
+	int = `INTEGER`,
+	blob = `BLOB`
 }
 
-// TODO: add doc
-function emptyHub(): Hub {
-    return {
-        id: "",
-        created: 0,
-        active: 0
-    }
+export interface Hub
+{
+	id: string
+	created: number
+	active: number
 }
 
-// TODO: add doc
-function emptyData(): DataItem {
-    return {
-        id: "",
-        added: 0,
-        active: 0,
-        content: "",
-        count: 0,
-        hub_id: ""
-    }
+export interface DataItem
+{
+	id: string
+	hub_id: string
+	added: number
+	active: number
+	count: number
+	content: Blob
 }
 
-// TODO: add doc
-function createHub(db: Database): () => Promise<Hub> {
-    return (): Promise<Hub> => {
-        return new Promise((resolve: Resolve<Hub>): void => {
-            const hub: Hub = {
-                id: uuid(),
-                created: Date.now(),
-                active: 1
-            }
-
-            db.run(
-                `INSERT INTO hubs values($id, $created, $active)`,
-                {
-                    $id: hub.id,
-                    $created: hub.created,
-                    $active: hub.active
-                },
-                (err: Error | null): void => {
-                    if (err) {
-                        throw debugError("Could not create hub", err.message)
-                    }
-
-                    resolve(hub)
-                }
-            )
-        })
-    }
+export interface DBUUIDProvider
+{
+	uuid(): Promise<string>
 }
 
-// TODO: add doc
-function deactivateHub(db: Database): (id: string) => Promise<Hub> {
-    return (id: string): Promise<Hub> => {
-        return new Promise((resolve: Resolve<Hub>): void => {
-            function update(hub: Hub): void {
-                db.run(
-                    "UPDATE hubs SET active = 0 WHERE id = $id",
-                    { $id: id },
-                    (err: Error | null): void => {
-                        if (err) {
-                            throw debugError(
-                                "Could not deactivate hub",
-                                err.message
-                            )
-                        }
+export class DB implements DataProvider
+{
+	private emptyHub: Hub
 
-                        resolve({ ...hub, active: 0 })
-                    }
-                )
-            }
+	private emptyData: DataItem
 
-            db.all(
-                "SELECT * FROM hubs WHERE id = $id LIMIT 1",
-                { $id: id },
-                (err: Error | null, rows: Hub[]): void => {
-                    if (err) {
-                        throw debugError(
-                            "Could not deactivate hub",
-                            err.message
-                        )
-                    } else if (rows.length === 0) {
-                        resolve(emptyHub())
-                    } else if (rows[0].active === 0) {
-                        resolve(rows[0])
-                    } else {
-                        update(rows[0])
-                    }
-                }
-            )
-        })
-    }
-}
+	constructor(
+		private db: sqlite.DB,
+		private uuid: DBUUIDProvider )
+	{
+		this.emptyData = {
+			id: ``,
+			added: 0,
+			active: 0,
+			content: new Blob(),
+			count: 0,
+			hub_id: ``
+		}
 
-// TODO: add doc
-// TODO: ensure content is unique
-function addData(
-    db: Database
-): (hubId: string, data: any) => Promise<DataItem> {
-    return (hubId: string, data: any): Promise<DataItem> => {
-        return new Promise((resolve: Resolve<DataItem>): void => {
-            const item: DataItem = {
-                id: uuid(),
-                added: Date.now(),
-                active: 1,
-                content: data,
-                count: 0,
-                hub_id: hubId
-            }
+		this.emptyHub = {
+			id: ``,
+			created: 0,
+			active: 0
+		}
 
-            db.run(
-                [
-                    "INSERT INTO datas VALUES",
-                    "($id, $hubId, $added, $active, $count, $content)"
-                ].join(" "),
-                {
-                    $id: item.id,
-                    $hubId: item.hub_id,
-                    $added: item.added,
-                    $active: item.active,
-                    $count: item.count,
-                    $content: item.content
-                },
-                (err: Error | null): void => {
-                    if (err) {
-                        throw debugError("Could not add data", err.message)
-                    }
+		this.init()
+	}
 
-                    resolve(item)
-                }
-            )
-        })
-    }
-}
+	private init()
+	{
+		this.db.query(
+			this.createTableQuery(
+				`hubs`,
+				[
+					[ `id`, DataType.string ],
+					[ `created`, DataType.int ],
+					[ `active`, DataType.int ]
+				]
+			),
+			[]
+		)
 
-// TODO: add doc
-function deactivateData(db: Database): (id: string) => Promise<DataItem> {
-    return (id: string): Promise<DataItem> => {
-        return new Promise((resolve: Resolve<DataItem>): void => {
-            function update(data: DataItem): void {
-                db.run(
-                    "UPDATE datas SET active = 0 WHERE id = $id",
-                    { $id: id },
-                    (err: Error | null): void => {
-                        if (err) {
-                            throw debugError(
-                                "Could not deactivate data item",
-                                err.message
-                            )
-                        }
+		this.db.query(
+			this.createTableQuery(
+				`datas`,
+				[
+					[ `id`, DataType.string ],
+					[ `hub_id`, DataType.string ],
+					[ `added`, DataType.int ],
+					[ `active`, DataType.int ],
+					[ `count`, DataType.int ],
+					[ `content`, DataType.blob ]
+				]
+			),
+			[]
+		)
+	}
 
-                        resolve({ ...data, active: 0 })
-                    }
-                )
-            }
+	/**
+	 * Fn to reduce code repitition and help creating tables
+	 * @param table table name
+	 * @param values column names
+	 */
+	private createTableQuery( 
+		table: string,
+		values: [string, DataType][] 
+	): string 
+	{
+		return [
+			`CREATE TABLE IF NOT EXISTS`,
+			table,
+			`(${values.map( ( v ) => v.join( ` ` ) ).join( `, ` )});`
+		].join( ` ` )
+	}
 
-            db.all(
-                "SELECT * FROM datas WHERE id = $id LIMIT 1",
-                { $id: id },
-                (err: Error | null, rows: DataItem[]): void => {
-                    if (err) {
-                        throw debugError(
-                            "Could not deactivate data",
-                            err.message
-                        )
-                    } else if (rows.length === 0) {
-                        resolve(emptyData())
-                    } else if (rows[0].active === 0) {
-                        resolve(rows[0])
-                    } else {
-                        update(rows[0])
-                    }
-                }
-            )
-        })
-    }
-}
+	private hub( id: string, created: number, active: number ): Hub
+	{
+		if ( typeof id !== `string` || typeof created !== `number` || typeof active !== `number` )
+			throw Error( `Hub data is invalid.` )
 
-// TODO: get data
-function getData(db: Database): (hubId: string) => Promise<DataItem> {
-    return (hubId: string): Promise<DataItem> => {
-        return new Promise((resolve: Resolve<DataItem>): void => {
-            function update(data: DataItem): void {
-                db.run(
-                    "UPDATE datas SET count = $count WHERE id = $id",
-                    { $id: data.id, $count: data.count + 1 },
-                    (err: Error | null): void => {
-                        if (err) {
-                            throw debugError(
-                                "Could not get data item",
-                                err.message
-                            )
-                        }
+		return { id, created, active }
+	}
 
-                        resolve({ ...data, count: data.count + 1 })
-                    }
-                )
-            }
+	private dataItem(
+		id: string,
+		hub_id: string,
+		added: number,
+		active: number,
+		count: number,
+		content: Blob,
+	): DataItem
+	{
+		if ( typeof id !== `string`
+			|| typeof hub_id !== `string`
+			|| typeof added !== `number`
+			|| typeof active !== `number`
+			|| typeof count !== `number` )
+			throw Error( `Data item is invalid` )
 
-            db.all(
-                [
-                    "SELECT * FROM datas ",
-                    "WHERE hub_id = $hubId AND active = 1 ",
-                    "ORDER BY count ASC"
-                ].join(""),
-                { $hubId: hubId },
-                (err: Error | null, rows: DataItem[]): void => {
-                    if (err) {
-                        throw debugError("Could not deactive data", err.message)
-                    } else if (rows.length === 0) {
-                        resolve(emptyData())
-                    } else {
-                        update(rows[randomInt(0, ~~(rows.length * 0.5))])
-                    }
-                }
-            )
-        })
-    }
-}
+		return { id, hub_id, active, added, content, count }
+	}
 
-// TODO: add doc
-export function initDb(db: Database): Database {
-    db.run(
-        [
-            "CREATE TABLE IF NOT EXISTS hubs(",
-            "id TEXT, created INTEGER, active INTEGER)"
-        ].join(""),
-        (err: Error | null): void => {
-            if (err) {
-                throw debugError("Could not initialise DB", err.message)
-            }
-        }
-    )
+	private updateCount( data: DataItem ): void
+	{
+		try 
+		{
+			this.db.query(
+				`UPDATE datas SET count = $count WHERE id = $id;`,
+				{ $id: data.id, $count: data.count + 1 },
+			)
+		}
+		catch ( e )
+		{
+			throw Error( `Could not update data item ${e.message}` )
+		}
+	}
 
-    db.run(
-        [
-            "CREATE TABLE IF NOT EXISTS datas(",
-            "id TEXT, hub_id TEXT, added INTEGER, active INTEGER, ",
-            "count INTEGER, content BLOB)"
-        ].join(""),
-        (err: Error | null): void => {
-            if (err) {
-                throw debugError("Could not initialise DB", err.message)
-            }
-        }
-    )
+	public getData( hubId: string ): DataItem
+	{
+		try
+		{
+			const rows = this.db.query(
+				[
+					// returns random entry from top 50% least chosen records
+					// for the given hub id
+					`SELECT * FROM datas`,
+					`WHERE hub_id = $hubId AND active = 1 ORDER BY count ASC`,
+					`LIMIT 1 OFFSET ABS(RANDOM()) %`,
+					`MAX((SELECT ROUND(COUNT(*) * 0.5) FROM datas`,
+					`WHERE hub_id = $hubId AND active = 1), 1);`
+				].join( ` ` ),
+				{ $hubId: hubId }
+			)
 
-    return db
-}
+			const row = rows.next()
 
-// TODO: add doc
-export function getDBActions(db: Database): DBActions {
-    return {
-        createHub: createHub(db),
-        deactivateHub: deactivateHub(db),
-        addData: addData(db),
-        deactivateData: deactivateData(db),
-        getData: getData(db)
-    }
+			if ( row.done )
+			{
+				return this.emptyData
+			}
+			else
+			{
+				const [ id, hub_id, added, active, count, content ] = row.value
+
+				const dataItem = this.dataItem( id, hub_id, added, active, count, content )
+
+				this.updateCount( dataItem )
+
+				return dataItem
+			}
+		}
+		catch ( e )
+		{
+			throw Error( `Could not get data ${e.message}` )
+		}
+	}
+
+	private setInactive( data: DataItem ): void
+	{
+		try 
+		{
+			this.db.query(
+				`UPDATE datas SET active = 0 WHERE id = $id;`,
+				{ $id: data.id },
+			)
+		}
+		catch ( e )
+		{
+			console.error( e )
+
+			throw Error( `Could not deactivate data item ${e.message}` )
+		}
+	}
+
+	public deactivateData( id: string ): DataItem 
+	{
+		try
+		{
+			const rows = this.db.query(
+				`SELECT * FROM datas WHERE id = $id LIMIT 1`,
+				{ $id: id },
+			)
+
+			const row = rows.next()
+
+			if ( row.done )
+			{
+				return this.emptyData
+			}
+			else
+			{
+				const [ id, hub_id, added, active, count, content ] = row.value
+
+				const dataItem = this.dataItem( id, hub_id, added, active, count, content )
+
+				if ( row.value[ 0 ].active !== 0 ) this.setInactive( dataItem )
+
+				return dataItem
+			} 
+		}
+		catch ( e )
+		{
+			throw Error( `Could not deactivate data ${e.message}` )
+		}
+	}
+
+	public async addData( hubId: string, data: Blob ): Promise<DataItem> 
+	{
+		const item: DataItem = {
+			id: await this.uuid.uuid(),
+			added: Date.now(),
+			active: 1,
+			content: data,
+			count: 0,
+			hub_id: hubId
+		}
+
+		try
+		{
+			const rows = this.db.query(
+				[
+					`INSERT INTO datas VALUES`,
+					`($id, $hubId, $added, $active, $count, $content)`
+				].join( ` ` ),
+				{
+					$id: item.id,
+					$hubId: item.hub_id,
+					$added: item.added,
+					$active: item.active,
+					$count: item.count,
+					$content: item.content
+				}
+			)
+
+			const row = rows.next()
+
+			if ( row.done )
+			{
+				return this.emptyData
+			}
+			else
+			{
+				const [ id, hub_id, added, active, count, content ] = row.value
+
+				return this.dataItem( id, hub_id, added, active, count, content )
+			}
+		}
+		catch ( e )
+		{
+			throw Error( `Could not add data ${e.message}` )
+		}
+	}
+
+	private setHubInactive( hub: Hub ): void
+	{
+		try
+		{
+			this.db.query(
+				`UPDATE hubs SET active = 0 WHERE id = $id`,
+				{ $id: hub.id }
+			)
+		}
+		catch ( e )
+		{
+			throw Error( `Could not deactivate hub ${e.message}` )
+		}
+	}
+
+	public deactivateHub( id: string ): Hub
+	{
+		try
+		{
+			const rows = this.db.query(
+				`SELECT * FROM hubs WHERE id = $id LIMIT 1`,
+				{ $id: id }
+			)
+
+			const row = rows.next()
+
+			if ( row.done )
+			{
+				return this.emptyHub
+			}
+			else
+			{
+				const [ id, created, active ] = row.value
+
+				const hub = this.hub( id, created, active )
+
+				if ( row.value[ 0 ].active !== 0 ) this.setHubInactive( hub )
+
+				return hub
+			}
+		}
+		catch ( e )
+		{
+			throw Error( `Could not deactivate hub ${e.message}` )
+		}
+	}
+
+	public async createHub(): Promise<Hub> 
+	{
+		const hub: Hub = {
+			id: await this.uuid.uuid(),
+			created: Date.now(),
+			active: 1
+		}
+
+		try
+		{
+			const rows = this.db.query(
+				`INSERT INTO hubs values($id, $created, $active)`,
+				{
+					$id: hub.id,
+					$created: hub.created,
+					$active: hub.active
+				}
+			)
+
+			const row = rows.next()
+
+			if ( row.done )
+			{
+				return this.emptyHub
+			}
+			else
+			{
+				const [ id, created, active ] = row.value
+
+				const hub = this.hub( id, created, active )
+
+				return hub
+			}
+		}
+		catch ( e )
+		{
+			throw Error( `Could not create hub ${e.message}` )
+		}
+	}
 }

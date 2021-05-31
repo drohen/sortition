@@ -1,5 +1,2 @@
 .DS_Store
-.vscode
 node_modules
-config/
-sortition_nginx.conf

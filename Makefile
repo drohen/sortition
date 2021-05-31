@@ -1,11 +1,45 @@
-ARGS=$(SORTITION_PORT)
+PERM0=--allow-env --allow-net --allow-run
+PERM1=--allow-write="$(SORTITION_DIR)" --allow-read="$(SORTITION_DIR),$(PWD)"
+PERM2=--unstable
+PERM=$(PERM0) $(PERM1) $(PERM2)
+PERM_OSX=$(PERM0) --allow-write="$(SORTITION_DIR),/usr/local/etc/nginx/servers" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
+PERM_LINUX=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/nginx/sites-enabled" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
+PERM_PROD=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/systemd/system" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
+ARGS0=--dir="$(SORTITION_DIR)" --port="$(SORTITION_PORT)"
+SERVE_ARGS=$(ARGS0)
+CONFIG_ARGS=--configure $(ARGS0) --host="$(NGINX_HOST)" --nginx="$(NGINX_PORT)"
+TEST_ARGS=--test $(CONFIG_ARGS)
+OS := $(shell uname)
+is_darwin :=$(filter Darwin,$(OS))
+CONFIG_DEV_CMD_LINUX=sudo $(HOME)/.deno/bin/deno run $(PERM_LINUX) src/sortition.ts $(CONFIG_ARGS)
+CONFIG_DEV_CMD_OSX=$(HOME)/.deno/bin/deno run $(PERM_OSX) src/sortition.ts $(CONFIG_ARGS)
 
-init:
-	NODE_ENV=production npm i 
-	./setupConfig.sh
-init-dev:
-	NODE_ENV=production npm i 
-	./setupConfig.sh dev
+
 run:
 	test $(SORTITION_PORT)
-	NODE_ENV=production node build/run_server.js $(SORTITION_PORT) $(HOME)/.sortition
+	test $(SORTITION_DIR)
+	$(HOME)/.deno/bin/deno run $(PERM) src/sortition.ts $(SERVE_ARGS)
+
+help:
+	$(HOME)/.deno/bin/deno run $(PERM2) src/sortition.ts --help
+
+tester:
+	test $(NGINX_HOST)
+	test $(NGINX_PORT)
+	test $(SORTITION_PORT)
+	test $(SORTITION_DIR)
+	$(HOME)/.deno/bin/deno run $(PERM) src/sortition.ts $(TEST_ARGS)
+
+config-dev:
+	test $(NGINX_HOST)
+	test $(NGINX_PORT)
+	test $(SORTITION_PORT)
+	test $(SORTITION_DIR)
+	$(if $(is_darwin), $(CONFIG_DEV_CMD_OSX), $(CONFIG_DEV_CMD_LINUX))
+
+config-prod:
+	test $(NGINX_HOST)
+	test $(NGINX_PORT)
+	test $(SORTITION_PORT)
+	test $(SORTITION_DIR)
+	sudo $(HOME)/.deno/bin/deno run $(PERM_PROD) src/sortition.ts $(CONFIG_ARGS)
