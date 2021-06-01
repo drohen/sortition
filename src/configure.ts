@@ -5,7 +5,8 @@ const nginxTemplate = (
 	serverName: string,
 	sortitionPort: number,
 	hubIDRegex: string
-) => `server {
+) => `server
+{
 	listen                          ${port};
 
 	server_name                     ${serverName};

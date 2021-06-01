@@ -15,7 +15,7 @@ export interface RequestsActionsProvider
 export interface RequestDataProvider
 {
 	getData: ( id: string ) => DataItem
-	addData: ( id: string, data: Blob ) => Promise<DataItem>
+	addData: ( id: string, data: Uint8Array ) => Promise<DataItem>
 	deactivateData: ( id: string ) => DataItem
 }
 
@@ -42,7 +42,7 @@ export class RequestHandler
 			}
 			else if ( url === `/create` ) 
 			{
-				this.handleBaseRequests( req )
+				await this.handleBaseRequests( req )
 			}
 			else 
 			{
@@ -61,7 +61,7 @@ export class RequestHandler
 					return
 				}
 	
-				this.handleHubRequests( req, uuid )
+				await this.handleHubRequests( req, uuid )
 			}
 		}
 		catch ( e )
@@ -137,8 +137,10 @@ export class RequestHandler
 							hubID, 
 							await this.handlers[ 0 ].validateAdd( req ) ) )
 				}
-				catch
+				catch ( e )
 				{
+					console.log( e )
+					
 					throw Error( `Bad request` )
 				}
 
@@ -146,12 +148,22 @@ export class RequestHandler
 
 			case `DELETE`:
 
-				this.handlers[ 0 ].onDelete(
-					req,
-					this.data.deactivateData( 
-						await this.handlers[ 0 ].validateDelete( req )
-					) )
-
+				try
+				{
+					this.handlers[ 0 ].onDelete(
+						req,
+						this.data.deactivateData( 
+							await this.handlers[ 0 ].validateDelete( req )
+						) )
+	
+				}
+				catch ( e )
+				{
+					console.log( e )
+					
+					throw Error( `Bad request` )
+				}
+				
 				break
 
 			case `OPTIONS`:

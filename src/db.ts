@@ -22,7 +22,7 @@ export interface DataItem
 	added: number
 	active: number
 	count: number
-	content: Blob
+	content: Uint8Array
 }
 
 export interface DBUUIDProvider
@@ -40,11 +40,21 @@ export class DB implements DataProvider
 		private db: sqlite.DB,
 		private uuid: DBUUIDProvider )
 	{
+		this.createHub = this.createHub.bind( this )
+
+		this.getData = this.getData.bind( this )
+
+		this.deactivateData = this.deactivateData.bind( this )
+
+		this.addData = this.addData.bind( this )
+
+		this.deactivateHub = this.deactivateHub.bind( this )
+
 		this.emptyData = {
 			id: ``,
 			added: 0,
 			active: 0,
-			content: new Blob(),
+			content: new Uint8Array(),
 			count: 0,
 			hub_id: ``
 		}
@@ -119,7 +129,7 @@ export class DB implements DataProvider
 		added: number,
 		active: number,
 		count: number,
-		content: Blob,
+		content: Uint8Array,
 	): DataItem
 	{
 		if ( typeof id !== `string`
@@ -236,7 +246,7 @@ export class DB implements DataProvider
 		}
 	}
 
-	public async addData( hubId: string, data: Blob ): Promise<DataItem> 
+	public async addData( hubId: string, data: Uint8Array ): Promise<DataItem> 
 	{
 		const item: DataItem = {
 			id: await this.uuid.uuid(),
@@ -249,7 +259,7 @@ export class DB implements DataProvider
 
 		try
 		{
-			const rows = this.db.query(
+			this.db.query(
 				[
 					`INSERT INTO datas VALUES`,
 					`($id, $hubId, $added, $active, $count, $content)`
@@ -264,18 +274,7 @@ export class DB implements DataProvider
 				}
 			)
 
-			const row = rows.next()
-
-			if ( row.done )
-			{
-				return this.emptyData
-			}
-			else
-			{
-				const [ id, hub_id, added, active, count, content ] = row.value
-
-				return this.dataItem( id, hub_id, added, active, count, content )
-			}
+			return item
 		}
 		catch ( e )
 		{
@@ -340,7 +339,7 @@ export class DB implements DataProvider
 
 		try
 		{
-			const rows = this.db.query(
+			this.db.query(
 				`INSERT INTO hubs values($id, $created, $active)`,
 				{
 					$id: hub.id,
@@ -349,20 +348,7 @@ export class DB implements DataProvider
 				}
 			)
 
-			const row = rows.next()
-
-			if ( row.done )
-			{
-				return this.emptyHub
-			}
-			else
-			{
-				const [ id, created, active ] = row.value
-
-				const hub = this.hub( id, created, active )
-
-				return hub
-			}
+			return hub
 		}
 		catch ( e )
 		{

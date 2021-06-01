@@ -36,7 +36,7 @@ export interface Handler
 	 * On request to add data, this event is called to parse the
 	 * request, and return data to be added to DB
 	 */
-	validateAdd: ( request: ServerRequest ) => Promise<Blob>
+	validateAdd: ( request: ServerRequest ) => Promise<Uint8Array>
 
 	/**
 	 * When delete request is made, this event is called to parse
@@ -47,10 +47,16 @@ export interface Handler
 
 export class DataHandler implements Handler
 {
-	constructor( private encoder: TextEncoder, private uuid: HandlerUUIDProvider )
-	{}
+	private decoder: TextDecoder
 
-	private async getString( req: ServerRequest, sizeLimit: number ): Promise<string>
+	constructor(
+		private encoder: TextEncoder,
+		private uuid: HandlerUUIDProvider )
+	{
+		this.decoder = new TextDecoder()
+	}
+
+	private async getData( req: ServerRequest, sizeLimit: number ): Promise<Uint8Array>
 	{
 		const { headers } = req
 
@@ -86,7 +92,18 @@ export class DataHandler implements Handler
 				}
 			}
 
-			return data.join( `` )
+			const output = new Uint8Array( downloaded )
+
+			let offset = 0
+
+			for ( const d of data )
+			{
+				output.set( d, offset )
+
+				offset += d.length
+			}
+
+			return output
 		}
 	}
 
@@ -106,11 +123,11 @@ export class DataHandler implements Handler
 		{
 			const headers = new Headers()
 
-			headers.append( `Location`, await data.content.text() )
+			headers.append( `Location`, this.decoder.decode( data.content ) )
 
 			req.respond( {
 				status: 302,
-				headers 
+				headers
 			} )
 		}
 		else
@@ -124,29 +141,22 @@ export class DataHandler implements Handler
 		req.respond( { status: 200 } )
 	}
 
-	public async validateAdd( req: ServerRequest ): Promise<Blob> 
+	public async validateAdd( req: ServerRequest ): Promise<Uint8Array> 
 	{
-		return new Blob( [ await this.getString( req, 1024 ) ] )
+		const blob = await this.getData( req, 1024 )
+
+		return blob
 	}
 
 	public async validateDelete( req: ServerRequest ): Promise<string> 
 	{
-		try 
-		{
-			const uuid: string = await this.getString( req, 36 )
+		const uuid: string = this.decoder.decode( ( await this.getData( req, 36 ) ) )
 
-			if ( !this.uuid.validateUUID( uuid ) ) 
-			{
-				throw Error( `Invalid data` )
-			}
-
-			return uuid
-		}
-		catch ( error ) 
+		if ( !this.uuid.validateUUID( uuid ) ) 
 		{
-			throw Error( `Error parsing data` )
+			throw Error( `Invalid data` )
 		}
+
+		return uuid
 	}
-
-	
 }
