@@ -155,7 +155,6 @@ export class RequestHandler
 						this.data.deactivateData( 
 							await this.handlers[ 0 ].validateDelete( req )
 						) )
-	
 				}
 				catch ( e )
 				{

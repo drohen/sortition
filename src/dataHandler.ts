@@ -126,13 +126,13 @@ export class DataHandler implements Handler
 			headers.append( `Location`, this.decoder.decode( data.content ) )
 
 			req.respond( {
-				status: 302,
+				status: 307,
 				headers
 			} )
 		}
 		else
 		{
-			req.respond( { status: 200 } )
+			req.respond( { status: 404 } )
 		}
 	}
 
