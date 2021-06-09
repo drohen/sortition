@@ -4,7 +4,7 @@ PERM2=--unstable
 PERM=$(PERM0) $(PERM1) $(PERM2)
 PERM_OSX=$(PERM0) --allow-write="$(SORTITION_DIR),/usr/local/etc/nginx/servers" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
 PERM_LINUX=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/nginx/sites-enabled" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
-PERM_PROD=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/systemd/system" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
+PERM_PROD=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/systemd/system,/etc/nginx/sites-enabled" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
 ARGS0=--dir="$(SORTITION_DIR)" --port="$(SORTITION_PORT)"
 SERVE_ARGS=$(ARGS0)
 CONFIG_ARGS=--configure $(ARGS0) --host="$(NGINX_HOST)" --nginx="$(NGINX_PORT)"
@@ -42,4 +42,4 @@ config-prod:
 	test $(NGINX_PORT)
 	test $(SORTITION_PORT)
 	test $(SORTITION_DIR)
-	sudo $(HOME)/.deno/bin/deno run $(PERM_PROD) src/sortition.ts $(CONFIG_ARGS)
+	sudo $(HOME)/.deno/bin/deno run $(PERM_PROD) src/sortition.ts $(CONFIG_ARGS) --production

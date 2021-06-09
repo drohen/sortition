@@ -43,7 +43,8 @@ const nginxTemplate = (
 const serviceTemplate = (
 	user: string,
 	projectPath: string,
-	sortitionPort: number
+	sortitionPort: number,
+	sortitionDir: string
 ) => `[Unit]
 Description=sortition server
 After=network.target
@@ -53,6 +54,7 @@ Type=simple
 User=${user}
 WorkingDirectory=${projectPath}
 Environment="SORTITION_PORT=${sortitionPort}"
+Environment="SORTITION_DIR=${sortitionDir}"
 ExecStart=/usr/bin/make run
 Restart=on-failure
 
@@ -82,12 +84,12 @@ export class Configure
 		private nginxPort: number,
 		private serverName: string,
 		private sortitionPort: number,
-		rootFilePath: string,
+		private rootFilePath: string,
 		nginxConfFileName = `sortition_nginx.conf`,
 	)
 	{
 		this.nginxPath = this.environment === `test`
-			? join( rootFilePath, nginxConfFileName )
+			? join( this.rootFilePath, nginxConfFileName )
 			: Deno.build.os === `linux`
 				? join( `/etc/nginx/sites-enabled`, nginxConfFileName )
 				: join( `/usr/local/etc/nginx/servers`, nginxConfFileName )
@@ -197,7 +199,7 @@ export class Configure
 
 		await this.restartService( `linux` )
 
-		const user = Deno.env.get( `USER` )
+		const user = Deno.env.get( `SUDO_USER` ) ?? Deno.env.get( `USER` )
 
 		if ( !user )
 		{
@@ -211,7 +213,8 @@ export class Configure
 			serviceTemplate(
 				user,
 				Deno.cwd(),
-				this.sortitionPort
+				this.sortitionPort,
+				this.rootFilePath
 			) )
 
 		const p0 = Deno.run( { cmd: [ `sudo`, `systemctl`, `start`, `sortition_server`  ] } )
