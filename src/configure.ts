@@ -77,6 +77,7 @@ export class Configure
 	 * @param sortitionPort port where sortition server will be run
 	 * @param rootFilePath path to where files are stored on the machine
 	 * @param nginxConfFileName file name to save the nginx config file under
+	 * @param serviceFileName file name to save the systemd file under
 	 */
 	constructor(
 		private environment: `test` | `development` | `production` = `development`,
@@ -86,6 +87,7 @@ export class Configure
 		private sortitionPort: number,
 		private rootFilePath: string,
 		nginxConfFileName = `sortition_nginx.conf`,
+		serviceFileName = `sortition_server.service`
 	)
 	{
 		this.nginxPath = this.environment === `test`
@@ -94,7 +96,7 @@ export class Configure
 				? join( `/etc/nginx/sites-enabled`, nginxConfFileName )
 				: join( `/usr/local/etc/nginx/servers`, nginxConfFileName )
 
-		this.servicePath = `/etc/systemd/system/sortition_server.service`
+		this.servicePath = `/etc/systemd/system/${serviceFileName}`
 	}
 
 	/**

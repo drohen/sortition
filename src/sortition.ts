@@ -122,7 +122,8 @@ class Sortition
 			flags.host,
 			port,
 			rootDir,
-			flags.name
+			flags.conf,
+			flags.service
 		)
 	}
 
