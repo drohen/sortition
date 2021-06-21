@@ -1,6 +1,6 @@
 {
 	"name": "sortition",
-	"version": "0.0.0",
+	"version": "1.0.0",
 	"description": "hub server to validate data, then randomly return it",
 	"main": "index.js",
 	"scripts": {
