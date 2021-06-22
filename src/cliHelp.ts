@@ -24,9 +24,9 @@ Arguments:
 	
 	--host="<host/ip>"		Address that will be used to access nginx, e.g. example.com
 	
-	--conf="<file name>"		Name of nginx configuration file, default is sortition_nginx.conf
+	--conf="<file name>"		Name of nginx configuration file, default is sortition_nginx
 	
-	--service="<file name>"		Name of service file, default is sortition_server.service
+	--service="<file name>"		Name of service file, default is sortition_server
 	
 	--help				Show this information screen
 `

@@ -87,16 +87,16 @@ export class Configure
 		private sortitionPort: number,
 		private rootFilePath: string,
 		nginxConfFileName = `sortition_nginx.conf`,
-		serviceFileName = `sortition_server.service`
+		private serviceFileName = `sortition_server`
 	)
 	{
 		this.nginxPath = this.environment === `test`
-			? join( this.rootFilePath, nginxConfFileName )
+			? join( this.rootFilePath, `${nginxConfFileName}.conf` )
 			: Deno.build.os === `linux`
-				? join( `/etc/nginx/sites-enabled`, nginxConfFileName )
-				: join( `/usr/local/etc/nginx/servers`, nginxConfFileName )
+				? join( `/etc/nginx/sites-enabled`, `${nginxConfFileName}.conf` )
+				: join( `/usr/local/etc/nginx/servers`, `${nginxConfFileName}.conf` )
 
-		this.servicePath = `/etc/systemd/system/${serviceFileName}`
+		this.servicePath = `/etc/systemd/system/${this.serviceFileName}.service`
 	}
 
 	/**
@@ -219,7 +219,7 @@ export class Configure
 				this.rootFilePath
 			) )
 
-		const p0 = Deno.run( { cmd: [ `sudo`, `systemctl`, `start`, `sortition_server`  ] } )
+		const p0 = Deno.run( { cmd: [ `sudo`, `systemctl`, `start`, `${this.serviceFileName}.service` ] } )
 
 		const { code: code0 } = await p0.status()
 
@@ -230,7 +230,7 @@ export class Configure
 
 		p0.close()
 
-		const p1 = Deno.run( { cmd: [ `sudo`, `systemctl`, `enable`, `sortition_server`  ] } )
+		const p1 = Deno.run( { cmd: [ `sudo`, `systemctl`, `enable`, `${this.serviceFileName}.service` ] } )
 
 		const { code: code1 } = await p1.status()
 
