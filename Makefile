@@ -7,8 +7,8 @@ PERM_LINUX=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/nginx/sites-enabled" --
 PERM_PROD=$(PERM0) --allow-write="$(SORTITION_DIR),/etc/systemd/system,/etc/nginx/sites-enabled" --allow-read="$(SORTITION_DIR),$(PWD)" $(PERM2)
 ARGS0=--dir="$(SORTITION_DIR)" --port="$(SORTITION_PORT)"
 SERVE_ARGS=$(ARGS0)
-NGINX_CONF?="sortition_nginx.conf"
-SERVICE_FILE?="sortition_server.service"
+NGINX_CONF?="sortition_nginx"
+SERVICE_FILE?="sortition_server"
 NAME_ARGS=--conf=$(NGINX_CONF) --service=$(SERVICE_FILE)
 CONFIG_ARGS=--configure $(ARGS0) --host="$(NGINX_HOST)" --nginx="$(NGINX_PORT)"
 TEST_ARGS=--test $(CONFIG_ARGS)
