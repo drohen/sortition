@@ -1,6 +1,6 @@
 {
 	"name": "sortition",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"description": "hub server to validate data, then randomly return it",
 	"main": "index.js",
 	"scripts": {
@@ -15,12 +15,12 @@
 	},
 	"bugs": {
 		"email": "email@drohen.com",
-		"url": "https://github.com/gaxge/sortition/issues"
+		"url": "https://github.com/drohen/sortition/issues"
 	},
 	"repository": {
-		"url": "https://github.com/gaxge/sortition.git"
+		"url": "https://github.com/drohen/sortition.git"
 	},
-	"homepage": "https://github.com/gaxge/sortition",
+	"homepage": "https://github.com/drohen/sortition",
 	"license": "MIT",
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^4.2.0",

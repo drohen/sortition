@@ -3,7 +3,6 @@ import * as path from "https://deno.land/std/path/mod.ts"
 import * as fs from "https://deno.land/std/fs/mod.ts"
 import { parse, Args } from "https://deno.land/std/flags/mod.ts"
 import { Configure } from "./configure.ts"
-import { Random } from "./random.ts"
 import { cli } from "./cliHelp.ts"
 
 
