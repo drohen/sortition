@@ -97,7 +97,12 @@ class Sortition
 				? `production`
 				: `development`
 
-		const random = new Random( 20, 0 )
+		const idLength = flags.idLength ? parseInt( flags.idLength, 10 ) : undefined
+
+		if ( idLength !== undefined && isNaN( idLength ) )
+		{
+			throw Error( `ID Length ${idLength} is not a number.` )
+		}
 
 		const nginxPort = parseInt( flags.nginx )
 
@@ -114,10 +119,30 @@ class Sortition
 		}
 
 		const rootDir: string = flags.dir
+
+		if ( environment === `production` )
+		{
+			let fail = false
+
+			if ( !idLength )
+			{
+				console.log( `Missing arg: idLength, required for production` )
+
+				fail = true
+			}
+
+			if ( !flags.idAlphabet )
+			{
+				console.log( `Missing arg: idAlphabet, required for production` )
+
+				fail = true
+			}
+
+			if ( fail ) throw Error()
+		}
 		
 		this.config = new Configure(
 			environment,
-			random.regexStr(),
 			nginxPort,
 			flags.host,
 			port,
@@ -129,7 +154,7 @@ class Sortition
 
 	private async server( flags: Args )
 	{
-		const reqArgs: string[] = [ `dir`, `port` ]
+		const reqArgs: string[] = [ `dir`, `port`, `idLength`, `idAlphabet` ]
 
 		const flagKeys: string[] = Object.keys( flags )
 
@@ -165,7 +190,14 @@ class Sortition
 			throw Error( `Port ${port} is not a number.` )
 		}
 
-		this.core = new Core( port, dbPath )
+		const idLength = parseInt( flags.idLength, 10 )
+
+		if ( isNaN( idLength ) )
+		{
+			throw Error( `ID Length ${idLength} is not a number.` )
+		}
+
+		this.core = new Core( port, dbPath, idLength, flags.idAlphabet )
 	}
 
 	/**

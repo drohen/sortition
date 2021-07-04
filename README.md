@@ -4,7 +4,7 @@ experimental pluggable hub server to validate data, then randomly return it
 
 ## Summary
 
-This project is a component of [\_noisecrypt](low.show/noisecrypt/). The component provides the ability to redirect requests to a random selection from a set of URLs. The URLs are generally [sludge](https://github.com/lowshow/sludge) endpoints. A hub is created using the UI, and this can then be used in sludge to add/remove endpoints to the hub, or in [syllid](https://github.com/lowshow/syllid) to fetch random streams for playback.
+This project is a component of [Rivalium](rivalium.com). The component provides the ability to redirect requests to a random selection from a set of URLs. The URLs are generally [sludge](https://github.com/drohen/sludge) endpoints. A hub is created using the UI, and this can then be used in sludge to add/remove endpoints to the hub, or in [syllid](https://github.com/drohen/syllid) to fetch random streams for playback.
 
 
 ## Install

@@ -33,9 +33,13 @@ export class Core implements ActionsProvider
 
 	public createHub: () => Promise<Hub>
 
-	constructor( private port: number, private dbPath: string )
+	constructor(
+		private port: number,
+		private dbPath: string,
+		idLength: number,
+		idAlphabet: string )
 	{
-		this.random = new Random( 20 )
+		this.random = new Random( idLength, idAlphabet )
 
 		this.db = new sqlite.DB( this.dbPath )
 

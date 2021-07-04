@@ -3,8 +3,7 @@ import { join } from "https://deno.land/std/path/mod.ts"
 const nginxTemplate = (
 	port: number,
 	serverName: string,
-	sortitionPort: number,
-	hubIDRegex: string
+	sortitionPort: number
 ) => `server
 {
 	listen                          ${port};
@@ -18,7 +17,7 @@ const nginxTemplate = (
 
 	# add/remove/get data for hub
 
-	location ~ "^/${hubIDRegex}"
+	location ~ "^/[a-zA-Z0-9_-]{10,}"
 	{
 		proxy_pass                  http://127.0.0.1:${sortitionPort};
 
@@ -44,7 +43,9 @@ const serviceTemplate = (
 	user: string,
 	projectPath: string,
 	sortitionPort: number,
-	sortitionDir: string
+	sortitionDir: string,
+	idLength: number,
+	idAlphabet: string
 ) => `[Unit]
 Description=sortition server
 After=network.target
@@ -55,6 +56,8 @@ User=${user}
 WorkingDirectory=${projectPath}
 Environment="SORTITION_PORT=${sortitionPort}"
 Environment="SORTITION_DIR=${sortitionDir}"
+Environment="ID_LENGTH=${idLength}"
+Environment="ID_ALPHABET=${idAlphabet}"
 ExecStart=/usr/bin/make run
 Restart=on-failure
 
@@ -76,17 +79,20 @@ export class Configure
 	 * @param serverName IP/domain to access nginx server
 	 * @param sortitionPort port where sortition server will be run
 	 * @param rootFilePath path to where files are stored on the machine
+	 * @param idLength number of chars in the ID
+	 * @param idAlphabet characters to be used in the ID
 	 * @param nginxConfFileName file name to save the nginx config file under
 	 * @param serviceFileName file name to save the systemd file under
 	 */
 	constructor(
 		private environment: `test` | `development` | `production` = `development`,
-		private regexStr: string,
 		private nginxPort: number,
 		private serverName: string,
 		private sortitionPort: number,
 		private rootFilePath: string,
-		nginxConfFileName = `sortition_nginx.conf`,
+		private idLength?: number,
+		private idAlphabet?: string,
+		nginxConfFileName = `sortition_nginx`,
 		private serviceFileName = `sortition_server`
 	)
 	{
@@ -111,8 +117,7 @@ export class Configure
 			nginxTemplate(
 				this.nginxPort,
 				this.serverName,
-				this.sortitionPort,
-				this.regexStr
+				this.sortitionPort
 			) )
 	}
 
@@ -149,8 +154,7 @@ export class Configure
 		const template = nginxTemplate(
 			this.nginxPort,
 			this.serverName,
-			this.sortitionPort,
-			this.regexStr
+			this.sortitionPort
 		)
 		
 
@@ -195,8 +199,7 @@ export class Configure
 			nginxTemplate(
 				this.nginxPort,
 				this.serverName,
-				this.sortitionPort,
-				this.regexStr
+				this.sortitionPort
 			) )
 
 		await this.restartService( `linux` )
@@ -208,6 +211,16 @@ export class Configure
 			throw Error( `Could not get user from $USER env var.` )
 		}
 
+		if ( !this.idLength )
+		{
+			throw Error( `ID length required for production.` )
+		}
+
+		if ( !this.idAlphabet )
+		{
+			throw Error( `ID Alphabet required for production.` )
+		}
+
 		console.log( `Writing file to`, this.servicePath )
 		
 		await Deno.writeTextFile( 
@@ -216,7 +229,9 @@ export class Configure
 				user,
 				Deno.cwd(),
 				this.sortitionPort,
-				this.rootFilePath
+				this.rootFilePath,
+				this.idLength,
+				this.idAlphabet
 			) )
 
 		const p0 = Deno.run( { cmd: [ `sudo`, `systemctl`, `start`, `${this.serviceFileName}.service` ] } )
