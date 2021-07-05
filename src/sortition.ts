@@ -146,6 +146,8 @@ class Sortition
 			flags.host,
 			port,
 			rootDir,
+			idLength,
+			flags.idAlphabet,
 			flags.conf,
 			flags.service
 		)

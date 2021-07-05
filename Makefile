@@ -23,6 +23,8 @@ PROD_ARGS=$(CONFIG_ARGS) $(NAME_ARGS) $(ID_ARGS) --production
 run:
 	test $(SORTITION_PORT)
 	test $(SORTITION_DIR)
+	test $(ID_ALPHABET)
+	test $(ID_LENGTH)
 	$(HOME)/.deno/bin/deno run $(PERM) src/sortition.ts $(SERVE_ARGS)
 
 help:
@@ -47,4 +49,6 @@ config-prod:
 	test $(NGINX_PORT)
 	test $(SORTITION_PORT)
 	test $(SORTITION_DIR)
+	test $(ID_ALPHABET)
+	test $(ID_LENGTH)
 	sudo $(HOME)/.deno/bin/deno run $(PERM_PROD) src/sortition.ts $(PROD_ARGS)
