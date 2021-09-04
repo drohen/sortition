@@ -123,7 +123,13 @@ export class DataHandler implements Handler
 		{
 			const headers = new Headers()
 
-			headers.append( `Location`, this.decoder.decode( data.content ) )
+			const url = new URL( this.decoder.decode( data.content ) )
+
+			const reqURL = new URL( req.url, `http://0.0.0.0` )
+
+			reqURL.searchParams.forEach( ( v, k ) => url.searchParams.set( k, v ) )
+
+			headers.append( `Location`, url.href )
 
 			req.respond( {
 				status: 307,

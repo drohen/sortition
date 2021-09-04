@@ -163,12 +163,10 @@ export class DB implements DataProvider
 		{
 			const rows = this.db.query(
 				[
-					// returns random entry from top 50% least chosen records
-					// for the given hub id
 					`SELECT * FROM datas`,
 					`WHERE hub_id = $hubId AND active = 1 ORDER BY count ASC`,
 					`LIMIT 1 OFFSET ABS(RANDOM()) %`,
-					`MAX((SELECT ROUND(COUNT(*) * 0.5) FROM datas`,
+					`MAX((SELECT COUNT(*) FROM datas`,
 					`WHERE hub_id = $hubId AND active = 1), 1);`
 				].join( ` ` ),
 				{ $hubId: hubId }
